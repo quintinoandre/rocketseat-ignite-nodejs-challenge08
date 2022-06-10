@@ -1,3 +1,4 @@
+import { v4 as uuidV4 } from "uuid";
 import { AppError } from "../../../../shared/errors/AppError";
 import { InMemoryUsersRepository } from "../../repositories/in-memory/InMemoryUsersRepository";
 import { CreateUserUseCase } from "../createUser/CreateUserUseCase";
@@ -7,9 +8,11 @@ import { AuthenticateUserUseCase } from "./AuthenticateUserUseCase";
 let inMemoryUsersRepository: InMemoryUsersRepository;
 let createUserUseCase: CreateUserUseCase;
 let authenticateUserUseCase: AuthenticateUserUseCase;
+let user: ICreateUserDTO;
+let user_id: string;
 
 describe("Authenticate user", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     inMemoryUsersRepository = new InMemoryUsersRepository();
 
     createUserUseCase = new CreateUserUseCase(inMemoryUsersRepository);
@@ -17,17 +20,19 @@ describe("Authenticate user", () => {
     authenticateUserUseCase = new AuthenticateUserUseCase(
       inMemoryUsersRepository
     );
-  });
 
-  it("Should be able to authenticate a user", async () => {
-    const user: ICreateUserDTO = {
+    user = {
       name: "User test",
-      email: "user@test.com",
+      email: `${uuidV4}@test.com`,
       password: "123456",
     };
 
-    await createUserUseCase.execute(user);
+    const { id } = await createUserUseCase.execute(user);
 
+    user_id = id as string;
+  });
+
+  it("Should be able to authenticate a user", async () => {
     const { email, password } = user;
 
     const response = await authenticateUserUseCase.execute({
@@ -35,19 +40,18 @@ describe("Authenticate user", () => {
       password,
     });
 
-    expect(response).toHaveProperty("token");
+    expect(response).toMatchObject({
+      user: {
+        id: expect.any(String),
+        name: user.name,
+        email: user.email,
+      },
+      token: expect.any(String),
+    });
   });
 
   it("Should not be able to authenticate a user with incorrect email", () => {
     expect(async () => {
-      const user: ICreateUserDTO = {
-        name: "User test",
-        email: "user@test.com",
-        password: "123456",
-      };
-
-      await createUserUseCase.execute(user);
-
       const { password } = user;
 
       await authenticateUserUseCase.execute({
@@ -59,14 +63,6 @@ describe("Authenticate user", () => {
 
   it("Should not be able to authenticate a user with incorrect password", () => {
     expect(async () => {
-      const user: ICreateUserDTO = {
-        name: "User test",
-        email: "user@test.com",
-        password: "123456",
-      };
-
-      await createUserUseCase.execute(user);
-
       const { email } = user;
 
       await authenticateUserUseCase.execute({
@@ -78,16 +74,8 @@ describe("Authenticate user", () => {
 
   it("Should not be able to authenticate a user with incorrect email and password", () => {
     expect(async () => {
-      const user: ICreateUserDTO = {
-        name: "User test",
-        email: "user@test.com",
-        password: "123456",
-      };
-
-      await createUserUseCase.execute(user);
-
       await authenticateUserUseCase.execute({
-        email: "incorrectemail@test.com",
+        email: "incorrectemail",
         password: "incorrectpassword",
       });
     }).rejects.toBeInstanceOf(AppError);

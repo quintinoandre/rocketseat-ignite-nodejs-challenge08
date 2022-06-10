@@ -1,3 +1,4 @@
+import { v4 as uuidV4 } from "uuid";
 import { AppError } from "../../../../shared/errors/AppError";
 import { InMemoryUsersRepository } from "../../../users/repositories/in-memory/InMemoryUsersRepository";
 import { CreateUserUseCase } from "../../../users/useCases/createUser/CreateUserUseCase";
@@ -10,9 +11,11 @@ let inMemoryUsersRepository: InMemoryUsersRepository;
 let inMemoryStatementsRepository: InMemoryStatementsRepository;
 let createUserUseCase: CreateUserUseCase;
 let createStatementUseCase: CreateStatementUseCase;
+let user: ICreateUserDTO;
+let user_id: string;
 
 describe("Create statement", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     inMemoryUsersRepository = new InMemoryUsersRepository();
 
     inMemoryStatementsRepository = new InMemoryStatementsRepository();
@@ -23,25 +26,27 @@ describe("Create statement", () => {
       inMemoryUsersRepository,
       inMemoryStatementsRepository
     );
-  });
 
-  it("Should create a deposit statement", async () => {
-    const user: ICreateUserDTO = {
+    user = {
       name: "User test",
-      email: "user@test.com",
+      email: `${uuidV4}@test.com`,
       password: "123456",
     };
 
-    const { id: userId } = await createUserUseCase.execute(user);
+    const { id } = await createUserUseCase.execute(user);
 
+    user_id = id as string;
+  });
+
+  it("Should be able to create a new deposit statement", async () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
     }
 
     const statement: ICreateStatementDTO = {
-      user_id: userId as string,
-      type: "deposit" as OperationType,
+      user_id,
+      type: OperationType.DEPOSIT,
       amount: 100,
       description: "Deposit test",
     };
@@ -54,23 +59,15 @@ describe("Create statement", () => {
     });
   });
 
-  it("Should create a withdraw statement", async () => {
-    const user: ICreateUserDTO = {
-      name: "User test",
-      email: "user@test.com",
-      password: "123456",
-    };
-
-    const { id: userId } = await createUserUseCase.execute(user);
-
+  it("Should be able to create a new withdraw statement", async () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
     }
 
     const depositStatement: ICreateStatementDTO = {
-      user_id: userId as string,
-      type: "deposit" as OperationType,
+      user_id,
+      type: OperationType.DEPOSIT,
       amount: 100,
       description: "Deposit test",
     };
@@ -78,7 +75,7 @@ describe("Create statement", () => {
     await createStatementUseCase.execute(depositStatement);
 
     const withdrawStatement: ICreateStatementDTO = {
-      user_id: userId as string,
+      user_id,
       type: "withdraw" as OperationType,
       amount: 100,
       description: "Withdraw test",
@@ -94,23 +91,15 @@ describe("Create statement", () => {
     });
   });
 
-  it("Should not create a withdraw statement with insufficient funds", () => {
+  it("Should not be able to create a new withdraw statement with insufficient funds", () => {
     expect(async () => {
-      const user: ICreateUserDTO = {
-        name: "User test",
-        email: "user@test.com",
-        password: "123456",
-      };
-
-      const { id: userId } = await createUserUseCase.execute(user);
-
       enum OperationType {
         DEPOSIT = "deposit",
         WITHDRAW = "withdraw",
       }
 
       const depositStatement: ICreateStatementDTO = {
-        user_id: userId as string,
+        user_id,
         type: "deposit" as OperationType,
         amount: 50,
         description: "Deposit test",
@@ -119,7 +108,7 @@ describe("Create statement", () => {
       await createStatementUseCase.execute(depositStatement);
 
       const withdrawStatement: ICreateStatementDTO = {
-        user_id: userId as string,
+        user_id,
         type: "withdraw" as OperationType,
         amount: 100,
         description: "Withdraw test",
@@ -129,7 +118,7 @@ describe("Create statement", () => {
     }).rejects.toBeInstanceOf(AppError);
   });
 
-  it("Should not create a statement with an invalid user id", () => {
+  it("Should not be able to create a new statement with an invalid user id", () => {
     expect(async () => {
       enum OperationType {
         DEPOSIT = "deposit",
@@ -138,7 +127,7 @@ describe("Create statement", () => {
 
       const statement: ICreateStatementDTO = {
         user_id: "invaliduserid",
-        type: "deposit" as OperationType,
+        type: OperationType.DEPOSIT,
         amount: 100,
         description: "Deposit test",
       };

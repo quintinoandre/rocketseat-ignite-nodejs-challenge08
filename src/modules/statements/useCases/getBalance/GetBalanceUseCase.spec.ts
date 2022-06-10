@@ -1,3 +1,4 @@
+import { v4 as uuidV4 } from "uuid";
 import { AppError } from "../../../../shared/errors/AppError";
 import { InMemoryUsersRepository } from "../../../users/repositories/in-memory/InMemoryUsersRepository";
 import { CreateUserUseCase } from "../../../users/useCases/createUser/CreateUserUseCase";
@@ -12,9 +13,11 @@ let createStatementUseCase: CreateStatementUseCase;
 let inMemoryUsersRepository: InMemoryUsersRepository;
 let inMemoryStatementsRepository: InMemoryStatementsRepository;
 let getBalanceUseCase: GetBalanceUseCase;
+let user: ICreateUserDTO;
+let user_id: string;
 
 describe("Get user balance", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     inMemoryUsersRepository = new InMemoryUsersRepository();
 
     inMemoryStatementsRepository = new InMemoryStatementsRepository();
@@ -30,25 +33,27 @@ describe("Get user balance", () => {
       inMemoryStatementsRepository,
       inMemoryUsersRepository
     );
-  });
 
-  it("Should get user balance", async () => {
-    const user: ICreateUserDTO = {
+    user = {
       name: "User test",
-      email: "user@test.com",
+      email: `${uuidV4}@test.com`,
       password: "123456",
     };
 
-    const { id: userId } = await createUserUseCase.execute(user);
+    const { id } = await createUserUseCase.execute(user);
 
+    user_id = id as string;
+  });
+
+  it("Should be able to get user balance", async () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
     }
 
     const depositStatement: ICreateStatementDTO = {
-      user_id: userId as string,
-      type: "deposit" as OperationType,
+      user_id,
+      type: OperationType.DEPOSIT,
       amount: 100,
       description: "Deposit test",
     };
@@ -56,17 +61,15 @@ describe("Get user balance", () => {
     await createStatementUseCase.execute(depositStatement);
 
     const withdrawStatement: ICreateStatementDTO = {
-      user_id: userId as string,
-      type: "withdraw" as OperationType,
+      user_id,
+      type: OperationType.WITHDRAW,
       amount: 50,
       description: "Withdraw test",
     };
 
     await createStatementUseCase.execute(withdrawStatement);
 
-    const result = await getBalanceUseCase.execute({
-      user_id: userId as string,
-    });
+    const result = await getBalanceUseCase.execute({ user_id });
 
     const { balance } = result;
 
@@ -75,7 +78,7 @@ describe("Get user balance", () => {
     expect(result).toHaveProperty("statement");
   });
 
-  it("Should not get user balance with invalid user id", () => {
+  it("Should not be able to get user balance with invalid user id", () => {
     expect(async () => {
       await getBalanceUseCase.execute({ user_id: "invaliduserid" });
     }).rejects.toBeInstanceOf(AppError);

@@ -1,3 +1,4 @@
+import { v4 as uuidV4 } from "uuid";
 import { AppError } from "../../../../shared/errors/AppError";
 import { InMemoryUsersRepository } from "../../../users/repositories/in-memory/InMemoryUsersRepository";
 import { CreateUserUseCase } from "../../../users/useCases/createUser/CreateUserUseCase";
@@ -12,9 +13,11 @@ let inMemoryStatementsRepository: InMemoryStatementsRepository;
 let createUserUseCase: CreateUserUseCase;
 let createStatementUseCase: CreateStatementUseCase;
 let getStatementOperationUseCase: GetStatementOperationUseCase;
+let user: ICreateUserDTO;
+let user_id: string;
 
 describe("Get statement operation", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     inMemoryUsersRepository = new InMemoryUsersRepository();
 
     inMemoryStatementsRepository = new InMemoryStatementsRepository();
@@ -30,25 +33,27 @@ describe("Get statement operation", () => {
       inMemoryUsersRepository,
       inMemoryStatementsRepository
     );
-  });
 
-  it("should be able to get statement operation", async () => {
-    const user: ICreateUserDTO = {
+    user = {
       name: "User test",
-      email: "user@test.com",
+      email: `${uuidV4}@test.com`,
       password: "123456",
     };
 
-    const { id: userId } = await createUserUseCase.execute(user);
+    const { id } = await createUserUseCase.execute(user);
 
+    user_id = id as string;
+  });
+
+  it("should be able to get statement operation", async () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
     }
 
     const statement: ICreateStatementDTO = {
-      user_id: userId as string,
-      type: "deposit" as OperationType,
+      user_id,
+      type: OperationType.DEPOSIT,
       amount: 100,
       description: "Deposit test",
     };
@@ -56,7 +61,7 @@ describe("Get statement operation", () => {
     const { id: statementId } = await createStatementUseCase.execute(statement);
 
     const statementOperation = await getStatementOperationUseCase.execute({
-      user_id: userId as string,
+      user_id,
       statement_id: statementId as string,
     });
 
@@ -65,22 +70,14 @@ describe("Get statement operation", () => {
 
   it("should not be able to get statement operation with invalid user id", () => {
     expect(async () => {
-      const user: ICreateUserDTO = {
-        name: "User test",
-        email: "user@test.com",
-        password: "123456",
-      };
-
-      const { id: userId } = await createUserUseCase.execute(user);
-
       enum OperationType {
         DEPOSIT = "deposit",
         WITHDRAW = "withdraw",
       }
 
       const statement: ICreateStatementDTO = {
-        user_id: userId as string,
-        type: "deposit" as OperationType,
+        user_id,
+        type: OperationType.DEPOSIT,
         amount: 100,
         description: "Deposit test",
       };
@@ -98,16 +95,8 @@ describe("Get statement operation", () => {
 
   it("should not be able to get statement operation with invalid statement id", () => {
     expect(async () => {
-      const user: ICreateUserDTO = {
-        name: "User test",
-        email: "user@test.com",
-        password: "123456",
-      };
-
-      const { id: userId } = await createUserUseCase.execute(user);
-
       await getStatementOperationUseCase.execute({
-        user_id: userId as string,
+        user_id,
         statement_id: "invalidstatementid",
       });
     }).rejects.toBeInstanceOf(AppError);

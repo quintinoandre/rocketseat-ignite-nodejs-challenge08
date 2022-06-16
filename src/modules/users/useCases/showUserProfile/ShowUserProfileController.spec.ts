@@ -29,7 +29,6 @@ describe("Show user profile", () => {
     await connection.query(`
     DELETE FROM users
     WHERE email = '${user.email}'
-    LIMIT 1
     `);
   });
 

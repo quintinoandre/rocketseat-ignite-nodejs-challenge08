@@ -30,7 +30,6 @@ describe("Get user balance", () => {
     await connection.query(`
     DELETE FROM users
     WHERE email = '${user.email}'
-    LIMIT 1
     `);
   });
 
@@ -39,6 +38,29 @@ describe("Get user balance", () => {
   });
 
   it("Should be able to get user balance", async () => {
+    const userToSend = {
+      name: "User test to send",
+      email: `${uuidV4()}@test.com`,
+      password: "123456",
+    };
+
+    await request(app)
+      .post("/api/v1/users")
+      .send(userToSend)
+      .set("content-type", "application/json");
+
+    const {
+      body: {
+        user: { id: userToSend_id },
+      },
+    } = await request(app)
+      .post("/api/v1/sessions")
+      .send({
+        email: userToSend.email,
+        password: userToSend.password,
+      })
+      .set("content-type", "application/json");
+
     const {
       body: {
         token,
@@ -55,6 +77,7 @@ describe("Get user balance", () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
+      TRANSFER = "transfer",
     }
 
     const depositStatement: ICreateStatementDTO = {
@@ -89,13 +112,30 @@ describe("Get user balance", () => {
       .set("Authorization", `Bearer ${token}`)
       .set("content-type", "application/json");
 
+    const transferStatement: ICreateStatementDTO = {
+      user_id: userToSend_id,
+      type: OperationType.TRANSFER,
+      amount: 50,
+      description: "Transfer test",
+      sender_id: userId,
+    };
+
+    await request(app)
+      .post(`/api/v1/statements/${transferStatement.type}s/${userToSend_id}`)
+      .send({
+        amount: transferStatement.amount,
+        description: transferStatement.description,
+      })
+      .set("Authorization", `Bearer ${token}`)
+      .set("content-type", "application/json");
+
     const response = await request(app)
       .get("/api/v1/statements/balance")
       .set("Authorization", `Bearer ${token}`);
 
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty("balance");
-    expect(response.body.balance).toBe(50);
+    expect(response.body.balance).toBe(0);
     expect(response.body).toHaveProperty("statement");
   });
 

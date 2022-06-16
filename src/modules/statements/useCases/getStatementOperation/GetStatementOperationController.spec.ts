@@ -30,7 +30,6 @@ describe("Get statement operation", () => {
     await connection.query(`
     DELETE FROM users
     WHERE email = '${user.email}'
-    LIMIT 1
     `);
   });
 
@@ -55,6 +54,7 @@ describe("Get statement operation", () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
+      TRANSFER = "transfer",
     }
 
     const statement: ICreateStatementDTO = {
@@ -106,6 +106,7 @@ describe("Get statement operation", () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
+      TRANSFER = "transfer",
     }
 
     const statement: ICreateStatementDTO = {
@@ -145,7 +146,7 @@ describe("Get statement operation", () => {
       .set("content-type", "application/json");
 
     const response = await request(app)
-      .get("/api/v1/statements/invalidstatementid")
+      .get(`/api/v1/statements/${uuidV4()}`)
       .set("Authorization", `Bearer ${token}`);
 
     expect(response.status).toBe(404);

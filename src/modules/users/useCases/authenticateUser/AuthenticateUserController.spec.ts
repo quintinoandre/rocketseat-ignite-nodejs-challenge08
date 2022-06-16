@@ -29,7 +29,6 @@ describe("Authenticate user", () => {
     await connection.query(`
     DELETE FROM users
     WHERE email = '${user.email}'
-    LIMIT 1
     `);
   });
 

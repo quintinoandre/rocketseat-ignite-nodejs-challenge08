@@ -23,7 +23,7 @@ describe("Authenticate user", () => {
 
     user = {
       name: "User test",
-      email: `${uuidV4}@test.com`,
+      email: `${uuidV4()}@test.com`,
       password: "123456",
     };
 

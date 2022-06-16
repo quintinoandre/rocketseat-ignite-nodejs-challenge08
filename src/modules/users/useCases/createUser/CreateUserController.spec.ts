@@ -14,7 +14,6 @@ describe("Create user", () => {
     await connection.query(`
     DELETE FROM users
     WHERE email = 'user@test.com'
-    LIMIT 1
     `);
   });
 

@@ -1,20 +1,29 @@
-import { Request, Response } from 'express';
-import { container } from 'tsyringe';
+import { Request, Response } from "express";
+import { container } from "tsyringe";
 
-import { CreateStatementUseCase } from './CreateStatementUseCase';
+import { CreateStatementUseCase } from "./CreateStatementUseCase";
 
 enum OperationType {
-  DEPOSIT = 'deposit',
-  WITHDRAW = 'withdraw',
+  DEPOSIT = "deposit",
+  WITHDRAW = "withdraw",
+  TRANSFER = "transfer",
 }
 
 export class CreateStatementController {
   async execute(request: Request, response: Response) {
-    const { id: user_id } = request.user;
-    const { amount, description } = request.body;
+    const {
+      body: { amount, description },
+    } = request;
 
-    const splittedPath = request.originalUrl.split('/')
-    const type = splittedPath[splittedPath.length - 1] as OperationType;
+    const user_id = request.params.user_id || request.user.id;
+
+    const sender_id = request.params.user_id && request.user.id;
+
+    const splittedPath = request.originalUrl.split("/");
+
+    const type = sender_id
+      ? OperationType.TRANSFER
+      : (splittedPath[splittedPath.length - 1] as OperationType);
 
     const createStatement = container.resolve(CreateStatementUseCase);
 
@@ -22,7 +31,8 @@ export class CreateStatementController {
       user_id,
       type,
       amount,
-      description
+      description,
+      sender_id,
     });
 
     return response.status(201).json(statement);

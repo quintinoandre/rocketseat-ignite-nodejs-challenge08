@@ -30,7 +30,6 @@ describe("Create statement", () => {
     await connection.query(`
     DELETE FROM users
     WHERE email = '${user.email}'
-    LIMIT 1
     `);
   });
 
@@ -55,6 +54,7 @@ describe("Create statement", () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
+      TRANSFER = "transfer",
     }
 
     const statement: ICreateStatementDTO = {
@@ -99,6 +99,7 @@ describe("Create statement", () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
+      TRANSFER = "transfer",
     }
 
     const depositStatement: ICreateStatementDTO = {
@@ -159,6 +160,7 @@ describe("Create statement", () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
+      TRANSFER = "transfer",
     }
 
     const depositStatement: ICreateStatementDTO = {
@@ -196,10 +198,185 @@ describe("Create statement", () => {
     expect(response.status).toBe(400);
   });
 
+  it("Should be able to create a new transfer statement", async () => {
+    const userToSend = {
+      name: "User test to send",
+      email: `${uuidV4()}@test.com`,
+      password: "123456",
+    };
+
+    await request(app)
+      .post("/api/v1/users")
+      .send(userToSend)
+      .set("content-type", "application/json");
+
+    const {
+      body: {
+        user: { id: userToSend_id },
+      },
+    } = await request(app)
+      .post("/api/v1/sessions")
+      .send({
+        email: userToSend.email,
+        password: userToSend.password,
+      })
+      .set("content-type", "application/json");
+
+    const {
+      body: {
+        token,
+        user: { id: userId },
+      },
+    } = await request(app)
+      .post("/api/v1/sessions")
+      .send({
+        email: user.email,
+        password: user.password,
+      })
+      .set("content-type", "application/json");
+
+    enum OperationType {
+      DEPOSIT = "deposit",
+      WITHDRAW = "withdraw",
+      TRANSFER = "transfer",
+    }
+
+    const depositStatement: ICreateStatementDTO = {
+      user_id: userId,
+      type: OperationType.DEPOSIT,
+      amount: 100,
+      description: "Deposit test",
+    };
+
+    await request(app)
+      .post(`/api/v1/statements/${depositStatement.type}`)
+      .send({
+        amount: depositStatement.amount,
+        description: depositStatement.description,
+      })
+      .set("Authorization", `Bearer ${token}`)
+      .set("content-type", "application/json");
+
+    const transferStatement: ICreateStatementDTO = {
+      user_id: userToSend_id,
+      type: OperationType.TRANSFER,
+      amount: 100,
+      description: "Transfer test",
+      sender_id: userId,
+    };
+
+    const response = await request(app)
+      .post(`/api/v1/statements/${transferStatement.type}s/${userToSend_id}`)
+      .send({
+        amount: transferStatement.amount,
+        description: transferStatement.description,
+      })
+      .set("Authorization", `Bearer ${token}`)
+      .set("content-type", "application/json");
+
+    expect(response.status).toBe(201);
+    expect(response.body).toMatchObject({
+      id: expect.any(String),
+      ...transferStatement,
+      created_at: expect.any(String),
+      updated_at: expect.any(String),
+    });
+
+    await connection.query(`
+    DELETE FROM users
+    WHERE email = '${userToSend.email}'
+    `);
+  });
+
+  it("Should not be able to create a new transfer statement with insufficient funds", async () => {
+    const userToSend = {
+      name: "User test to send",
+      email: `${uuidV4()}@test.com`,
+      password: "123456",
+    };
+
+    await request(app)
+      .post("/api/v1/users")
+      .send(userToSend)
+      .set("content-type", "application/json");
+
+    const {
+      body: {
+        user: { id: userToSend_id },
+      },
+    } = await request(app)
+      .post("/api/v1/sessions")
+      .send({
+        email: userToSend.email,
+        password: userToSend.password,
+      })
+      .set("content-type", "application/json");
+
+    const {
+      body: {
+        token,
+        user: { id: userId },
+      },
+    } = await request(app)
+      .post("/api/v1/sessions")
+      .send({
+        email: user.email,
+        password: user.password,
+      })
+      .set("content-type", "application/json");
+
+    enum OperationType {
+      DEPOSIT = "deposit",
+      WITHDRAW = "withdraw",
+      TRANSFER = "transfer",
+    }
+
+    const depositStatement: ICreateStatementDTO = {
+      user_id: userId,
+      type: OperationType.DEPOSIT,
+      amount: 50,
+      description: "Deposit test",
+    };
+
+    await request(app)
+      .post(`/api/v1/statements/${depositStatement.type}`)
+      .send({
+        amount: depositStatement.amount,
+        description: depositStatement.description,
+      })
+      .set("Authorization", `Bearer ${token}`)
+      .set("content-type", "application/json");
+
+    const transferStatement: ICreateStatementDTO = {
+      user_id: userToSend_id,
+      type: OperationType.TRANSFER,
+      amount: 100,
+      description: "Transfer test",
+      sender_id: userId,
+    };
+
+    const response = await request(app)
+      .post(`/api/v1/statements/${transferStatement.type}s/${userToSend_id}`)
+      .send({
+        amount: transferStatement.amount,
+        description: transferStatement.description,
+      })
+      .set("Authorization", `Bearer ${token}`)
+      .set("content-type", "application/json");
+
+    expect(response.status).toBe(400);
+
+    await connection.query(`
+    DELETE FROM users
+    WHERE email = '${userToSend.email}'
+    `);
+  });
+
   it("Should not be able to create a new statement with invalid token", async () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
+      TRANSFER = "transfer",
     }
 
     const statement: ICreateStatementDTO = {

@@ -36,7 +36,7 @@ describe("Get user balance", () => {
 
     user = {
       name: "User test",
-      email: `${uuidV4}@test.com`,
+      email: `${uuidV4()}@test.com`,
       password: "123456",
     };
 
@@ -46,9 +46,18 @@ describe("Get user balance", () => {
   });
 
   it("Should be able to get user balance", async () => {
+    const userToSend = {
+      name: "User test to send",
+      email: `${uuidV4()}@test.com`,
+      password: "123456",
+    };
+
+    const { id: userToSend_id } = await createUserUseCase.execute(userToSend);
+
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
+      TRANSFER = "transfer",
     }
 
     const depositStatement: ICreateStatementDTO = {
@@ -69,12 +78,22 @@ describe("Get user balance", () => {
 
     await createStatementUseCase.execute(withdrawStatement);
 
+    const transferStatement: ICreateStatementDTO = {
+      user_id: userToSend_id as string,
+      type: OperationType.TRANSFER,
+      amount: 50,
+      description: "Transfer test",
+      sender_id: user_id,
+    };
+
+    await createStatementUseCase.execute(transferStatement);
+
     const result = await getBalanceUseCase.execute({ user_id });
 
     const { balance } = result;
 
     expect(result).toHaveProperty("balance");
-    expect(balance).toBe(50);
+    expect(balance).toBe(0);
     expect(result).toHaveProperty("statement");
   });
 

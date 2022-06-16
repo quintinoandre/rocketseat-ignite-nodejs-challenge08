@@ -36,7 +36,7 @@ describe("Get statement operation", () => {
 
     user = {
       name: "User test",
-      email: `${uuidV4}@test.com`,
+      email: `${uuidV4()}@test.com`,
       password: "123456",
     };
 
@@ -49,6 +49,7 @@ describe("Get statement operation", () => {
     enum OperationType {
       DEPOSIT = "deposit",
       WITHDRAW = "withdraw",
+      TRANSFER = "transfer",
     }
 
     const statement: ICreateStatementDTO = {
@@ -73,6 +74,7 @@ describe("Get statement operation", () => {
       enum OperationType {
         DEPOSIT = "deposit",
         WITHDRAW = "withdraw",
+        TRANSFER = "transfer",
       }
 
       const statement: ICreateStatementDTO = {

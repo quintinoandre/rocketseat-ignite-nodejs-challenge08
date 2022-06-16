@@ -137,6 +137,11 @@ describe("Get user balance", () => {
     expect(response.body).toHaveProperty("balance");
     expect(response.body.balance).toBe(0);
     expect(response.body).toHaveProperty("statement");
+
+    await connection.query(`
+    DELETE FROM users
+    WHERE email = '${userToSend.email}'
+    `);
   });
 
   it("Should not be able to get user balance with invalid token", async () => {
